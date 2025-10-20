@@ -2,19 +2,35 @@ struct BetaArray <: Gen.Distribution{Array{Float64}} end
 const beta_array = BetaArray()
 
 function Gen.logpdf(::BetaArray, x::Array{Float64}, a, b)
-    pdf((val, a_i, b_i)) = Gen.logpdf(Gen.beta,val,a_i,b_i) 
-    logprobs = pdf.(zip(x,a,b))
-    sum(logprobs)
+    @assert length(x) == length(a) == length(b) "Length missmatch"
+    n = length(x)
+    logprob = 0.0
+    @inbounds for i = 1:n
+        logprob += Gen.logpdf(Gen.beta, x[i], a[i], b[i])
+    end
+    return logprob
 end
 
 function Gen.random(::BetaArray, a, b)
-    [Gen.random(Gen.beta,a[i],b[i]) for i in 1:length(a)]
+    @assert length(a) == length(b) "Length missmatch"
+    n = length(a)
+    result = Vector{Float64}(undef, n)
+    @inbounds for i = 1:n
+        result[i] = Gen.random(Gen.beta, a[i], b[i])
+    end
+    return result
 end
 
 function Gen.logpdf_grad(::BetaArray, x::Array{Float64}, a, b)
-    pdf_grad((val, a_i, b_i)) = Gen.logpdf_grad(Gen.beta,val,a_i,b_i) 
-    grads = pdf_grad.(zip(x,a,b))
-    map(i->i[1], grads),map(i->i[2], grads),map(i->i[3], grads)
+    @assert length(x) == length(a) == length(b) "Length missmatch"
+    n = length(x)
+    xgrads = Vector{Float64}(undef, n)
+    agrads = Vector{Float64}(undef, n)
+    bgrads = Vector{Float64}(undef, n)
+    @inbounds for i = 1:n
+        xgrads[i], agrads[i], bgrads[i] = Gen.logpdf_grad(Gen.beta, x[i], a[i], b[i])
+    end
+    (xgrads, agrads, bgrads)
 end
 
 Gen.has_output_grad(::BetaArray) = true
